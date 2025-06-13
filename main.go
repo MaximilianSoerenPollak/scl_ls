@@ -2,11 +2,12 @@ package main
 
 import (
 	"bufio"
-	"os"
+	"encoding/json"
 	"log"
+	"os"
 
+	"sclls/lsp"
 	"sclls/rpc"
-
 )
 
 func main() {
@@ -15,15 +16,43 @@ func main() {
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Split(rpc.Split)
 	for scanner.Scan() {
-		msg := scanner.Text()
-		handleMessage(logger, msg)
+		msg := scanner.Bytes()
+		method, content, err := rpc.DecodeMsg(msg)
+		if err != nil {
+			logger.Printf("got an error: %s", err.Error())
+		}
+		handleMessage(logger, method, content)
 	}
 }
 
-func handleMessage(logger *log.Logger, msg any) {
-	logger.Println(msg)
-}
+func handleMessage(logger *log.Logger, method string, contents []byte) {
+	logger.Printf("Revieced msg with method: %s", method)
 
+	switch method {
+	case "initialize":
+		var request lsp.InitializeRequest
+		if err := json.Unmarshal(contents, &request); err != nil {
+			logger.Printf("could not parse stuff: %s", err.Error())
+		}
+		logger.Printf("Connected to: %s %s", request.Params.ClientInfo.Name, request.Params.ClientInfo.Version)
+		// let's reply here. How?
+		writer := os.Stdout
+		msg := lsp.NewInitializeReponse(request.ID)
+		reply := rpc.EncodeMsg(msg)
+		writer.Write([]byte(reply))
+
+		logger.Printf("Send the reply: %v", msg)
+	case "textDocument/didOpen":
+		var request lsp.DidOpenTextDocumentNotification
+		if err := json.Unmarshal(contents, &request); err != nil {
+			logger.Printf("could not parse stuff: %s", err.Error())
+		}
+		logger.Printf("Opened : %s", request.Params.TextDocument.URI)
+		// let's reply here. How?
+		logger.Printf("Text inside the File: %s", request.Params.TextDocument.Text)
+
+	}
+}
 
 func getLogger(filename string) *log.Logger {
 	logfile, err := os.OpenFile(filename, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)

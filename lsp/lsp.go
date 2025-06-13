@@ -20,3 +20,4 @@ type Notification struct {
 	RPC    string `json:"jsonrpc"`
 	Method string `json:"method"`
 }
+
