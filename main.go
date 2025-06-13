@@ -31,5 +31,5 @@ func getLogger(filename string) *log.Logger {
 		// TODO: better error here
 		panic("not a good file")
 	}
-	return log.New(logfile, "[sclls]", log.Ldate|log.Lshortfile)
+	return log.New(logfile, "[sclls]", log.Ldate|log.Ltime|log.Lshortfile)
 }
