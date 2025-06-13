@@ -4,15 +4,32 @@ import (
 	"bufio"
 	"encoding/json"
 	"log"
+	"flag"
 	"os"
 
+	"sclls/internal"
 	"sclls/lsp"
 	"sclls/rpc"
 )
 
 func main() {
 	logger := getLogger("/home/maxi/dev/scl_ls/log.txt")
+	needsPath := flag.String("needsPath", "needs.json", "The path to your needs.json")
+	enabled := flag.Bool("enable", false, "Disable the server.")
+	docsPath := flag.String("docsPath", "docs", "The path to your docs folder")
+	logger.Printf("Gotten following configs: %s, %s", needsPath, docsPath)
 	logger.Println("Hey, sclls started")
+	
+	srvConfig := internal.ServerConfig{
+		Enabled: *enabled,
+		NeedsJsonPath: *needsPath,
+		DocumentRootPath: *docsPath,
+	}
+	if !srvConfig.Enabled {
+		logger.Println("Server was disabled. Exciting")
+		os.Exit(0)
+	}
+	_ = internal.ParseNeedsJson(srvConfig, logger)
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Split(rpc.Split)
 	for scanner.Scan() {
