@@ -39,3 +39,25 @@ func DecodeMsg(msg []byte) (string, []byte, error) {
 	}
 	return baseMsg.Method, content[:contentLength], nil
 }
+
+
+// type SplitFunc func(data []byte, atEOF bool) (advance int, token []byte, err error)
+func Split(data []byte, _ bool) (advance int, token []byte, err error) {
+	header, content, found := bytes.Cut(data, []byte{'\r', '\n', '\r', '\n'})
+	if !found {
+		return 0, nil, nil
+	}
+	// Content-Length: <number>
+	contentLenghtBytes := header[len("Content-Length: "):]
+	contentLength, err := strconv.Atoi(string(contentLenghtBytes))
+	if err != nil {
+		// 'LS got no idea what to do here => error'
+		return 0, nil, err
+	}
+	if len(content) < contentLength {
+		return 0, nil, nil
+	}
+	totalLenght := len(header) + 4 + contentLength
+
+	return totalLenght, data[:totalLenght], nil
+}
