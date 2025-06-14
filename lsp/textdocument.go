@@ -16,6 +16,16 @@ type VersionedTextDocumentIdentifies struct {
 	Version int `json:"version"`
 }
 
+type TextDocumentPositionParams struct {
+	TextDocument TextDocumentIdentifier `json:"textDocument"`
+	Position     Position               `json:"position"`
+}
+
+type Position struct {
+	Line      int `json:"line"`
+	Character int `json:"character"`
+}
+
 // TextDocumentDidOpen
 type DidOpenTextDocumentNotification struct {
 	Notification
@@ -33,10 +43,35 @@ type TextDocumentDidChangeNotification struct {
 }
 
 type DidChangeTextDocumentParams struct {
-	TextDocument                   VersionedTextDocumentIdentifies  `json:"textDocument"`
+	TextDocument   VersionedTextDocumentIdentifies  `json:"textDocument"`
 	ContentChanges []TextDocumentContentChangeEvent `json:"contentChanges"`
 }
 
 type TextDocumentContentChangeEvent struct {
 	Text string `json:"text"`
+}
+
+// TextDocument/Hover
+
+type HoverRequest struct {
+	Request
+	Params HoverParams `json:"params"`
+}
+
+type HoverParams struct {
+	TextDocumentPositionParams
+}
+
+type HoverResponse struct {
+	Response
+	Result HoverResult `json:"result"`
+}
+
+type HoverResult struct {
+	Contents string `json:"contents"`
+}
+
+func BuildHoverResponse() string {
+	var s string
+	return s
 }
