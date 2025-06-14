@@ -6,11 +6,13 @@ type Creator struct {
 }
 
 type Version struct {
-	Creator Creator                `json:"creator"`
-	Needs   map[string]Requirement `json:"needs"`
+	Creator Creator `json:"creator"`
+	NeedsInfo `json:"needs"`
 }
 
-type Requirement struct {
+type NeedsInfo map[string]Need
+
+type Need struct {
 	// Idea here is to display the thing nicely maybe in the future.
 	// But for now we just want to go to the definition
 	Content     string   `json:"content"`

@@ -10,12 +10,14 @@ import (
 	"sclls/internal"
 	"sclls/lsp"
 	"sclls/rpc"
+
+	//"github.com/goforj/godump"
 )
 
 func main() {
 	logger := getLogger("/home/maxi/dev/scl_ls/log.txt")
 	needsPath := flag.String("needsPath", "needs.json", "The path to your needs.json")
-	enabled := flag.Bool("enable", false, "Disable the server.")
+	enabled := flag.Bool("enable", true, "Disable the server.")
 	docsPath := flag.String("docsPath", "docs", "The path to your docs folder")
 	logger.Printf("Gotten following configs: %s, %s", needsPath, docsPath)
 	logger.Println("Hey, sclls started")
@@ -29,7 +31,6 @@ func main() {
 		logger.Println("Server was disabled. Exciting")
 		os.Exit(0)
 	}
-	_ = internal.ParseNeedsJson(srvConfig, logger)
 	scanner := bufio.NewScanner(os.Stdin)
 	scanner.Split(rpc.Split)
 	for scanner.Scan() {
@@ -38,12 +39,13 @@ func main() {
 		if err != nil {
 			logger.Printf("got an error: %s", err.Error())
 		}
-		handleMessage(logger, method, content)
+		handleMessage(logger, method, content, srvConfig)
 	}
 }
 
-func handleMessage(logger *log.Logger, method string, contents []byte) {
+func handleMessage(logger *log.Logger, method string, contents []byte, srvConfig internal.ServerConfig) {
 	logger.Printf("Revieced msg with method: %s", method)
+	//logger.Printf("Revieced msg contents: %s", contents)
 
 	switch method {
 	case "initialize":
@@ -67,7 +69,25 @@ func handleMessage(logger *log.Logger, method string, contents []byte) {
 		logger.Printf("Opened : %s", request.Params.TextDocument.URI)
 		// let's reply here. How?
 		logger.Printf("Text inside the File: %s", request.Params.TextDocument.Text)
+		documentNeedsEmpty := internal.NewDocumentNeeds(request.Params.TextDocument.URI, logger)
+		content := []byte(request.Params.TextDocument.Text)
+		ndi := internal.FindAllNeedsPositions(content, needsList)
+		documentNeedsEmpty.Needs = ndi
+		//out := godump.DumpStr(documentNeedsEmpty)
+		//logger.Printf("FINISHED finding all needs: %v", out)
 
+	case "textDocument/didChange":
+		var request lsp.TextDocumentDidChangeNotification
+		logger.Printf("Revieced msg for did change contents: %s", contents)
+		if err := json.Unmarshal(contents, &request); err != nil {
+			logger.Printf("could not parse stuff. didChange. Err: %s", err.Error())
+		}
+		logger.Printf("Opened : %s", request.Params.TextDocument.URI)
+		for _, change := request.Params.ContentChanges {
+			// TODO: Update text Document state	
+		}
+		// let's reply here. How?
+		logger.Printf("Text inside the File: %s", request.Params.TextDocument.Text)
 	}
 }
 
