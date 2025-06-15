@@ -1,5 +1,9 @@
 package internal
 
+import (
+	"fmt"
+)
+
 type Creator struct {
 	Program string `json:"program"`
 	Version string `json:"version"`
@@ -68,34 +72,7 @@ type NeedsJsonInfo struct {
 	Versions       map[string]Version `json:"versions"`
 }
 
-// "current_version": "0.1",
-// "project": "Score Docs-as-Code",
-// "versions": {
-//   "0.1": {
-//     "creator": {
-//       "program": "sphinx_needs",
-//       "version": "5.1.0"
-//     },
-//     "needs": {
-//       "feat_req__example__some_title": {
-//         "content": "With this requirement we can check if the removal of the prefix is working correctly.\nIt should remove id_prefix (SCORE _) as it's defined inside the BUILD file and remove it before it checks the leftover value\nagainst the allowed defined regex in the metamodel\nNote: The ID is different here as the 'folder structure' is as well",
-//         "docname": "how-to-integrate/example/index",
-//         "external_css": "external_link",
-//         "id": "feat_req__example__some_title",
-//         "layout": "score",
-//         "lineno": 38,
-//         "reqtype": "Process",
-//         "safety": "ASIL_D",
-//         "satisfies": [
-//           "SCORE_stkh_req__overall_goals__reuse_of_app_soft"
-//         ],
-//         "section_name": "Example",
-//         "sections": [
-//           "Example"
-//         ],
-//         "security": "YES",
-//         "status": "invalid",
-//         "title": "Some Title",
-//         "type": "feat_req",
-//         "type_name": "Feature Requirement"
-//       },
+func (n Need) GenerateHoverInfo() string {
+	// Type,Status,Implemented
+	return fmt.Sprintf("Type: %s\nStatus: %s\nImplemented: %s\n\n %s", n.Type, n.Status, n.Implemented, n.Content)
+}

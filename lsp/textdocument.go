@@ -23,7 +23,7 @@ type TextDocumentPositionParams struct {
 
 type Position struct {
 	Line      int `json:"line"`
-	Character int `json:"character"`
+	Character int `json:"character"` // Column
 }
 
 // TextDocumentDidOpen
@@ -71,7 +71,30 @@ type HoverResult struct {
 	Contents string `json:"contents"`
 }
 
-func BuildHoverResponse() string {
-	var s string
-	return s
+type DefinitionRequest struct {
+	Request
+	Params DefinitionParams `json:"params"`
+}
+
+type DefinitionParams struct {
+	TextDocumentPositionParams
+}
+
+type DefinitionResponse struct {
+	Response
+	Result DefinitionResult `json:"result"`
+}
+
+type DefinitionResult struct {
+	Location
+}
+
+type Location struct {
+	URI   string
+	Range Range `json:"range"`
+}
+
+type Range struct {
+	Start Position `json:"start"`
+	End   Position `json:"end"`
 }

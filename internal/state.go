@@ -2,6 +2,10 @@ package internal
 
 import (
 	"log"
+
+	"errors"
+
+	"sclls/lsp"
 )
 
 type State struct {
@@ -48,4 +52,32 @@ func (s *State) UpdateDocument(uri string, content string) {
 func (s *State) UpdateNeedsJson(path string) {
 	needsJson := ParseNeedsJson(path, s.Logger)
 	s.NeedsList = GetNeedsList(needsJson)
+}
+
+func (s *State) FindNeedsInRequestedPosition(docURI string, pos lsp.Position) (Need, error) {
+	docInfo := s.Documents[docURI]
+	// Probably can speed this up somehow
+	for _, need := range docInfo.Needs {
+		for _, p := range need.Positions {
+			if pos.Line == p.Line && pos.Character >= p.StartCol && pos.Character <= p.EndCol {
+				return need.Need, nil
+			}
+		}
+	}
+	return Need{}, errors.New("could not find information for requested position")
+}
+
+func (s *State) GoToDefinition(id int, docUri string, pos lsp.Position) lsp.DefinitionResponse {		
+	l := lsp.Location{URI: docUri}
+
+	return lsp.DefinitionResponse{
+		Response: lsp.Response{
+			RPC: "2.0",
+			ID:  &id,
+		},
+		Result: lsp.DefinitionResult{
+			Location: l,
+
+		},
+	}
 }

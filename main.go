@@ -3,15 +3,14 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"io"
 	"log"
-	"flag"
 	"os"
 
 	"sclls/internal"
 	"sclls/lsp"
 	"sclls/rpc"
-
 	//"github.com/goforj/godump"
 )
 
@@ -22,10 +21,10 @@ func main() {
 	docsPath := flag.String("docsPath", "docs", "The path to your docs folder")
 	//logger.Printf("Gotten following configs: %s, %s", needsPath, docsPath)
 	logger.Println("Hey, sclls started")
-	
+
 	srvConfig := internal.ServerConfig{
-		Enabled: *enabled,
-		NeedsJsonPath: *needsPath,
+		Enabled:          *enabled,
+		NeedsJsonPath:    *needsPath,
 		DocumentRootPath: *docsPath,
 	}
 	state := internal.NewState(srvConfig, logger)
@@ -42,11 +41,11 @@ func main() {
 		if err != nil {
 			logger.Printf("got an error: %s", err.Error())
 		}
-		handleMessage(logger,writer,state, method, content, srvConfig)
+		handleMessage(logger, writer, state, method, content, srvConfig)
 	}
 }
 
-func handleMessage(logger *log.Logger,writer io.Writer, state internal.State, method string, contents []byte, srvConfig internal.ServerConfig) {
+func handleMessage(logger *log.Logger, writer io.Writer, state internal.State, method string, contents []byte, srvConfig internal.ServerConfig) {
 	logger.Printf("Revieced msg with method: %s", method)
 	//logger.Printf("Revieced msg contents: %s", contents)
 
@@ -82,7 +81,7 @@ func handleMessage(logger *log.Logger,writer io.Writer, state internal.State, me
 		logger.Printf("Opened : %s", request.Params.TextDocument.URI)
 		for _, change := range request.Params.ContentChanges {
 			state.UpdateDocument(request.Params.TextDocument.URI, change.Text)
-			// TODO: Update text Document state	
+			// TODO: Update text Document state
 		}
 		// let's reply here. How?
 
@@ -96,19 +95,55 @@ func handleMessage(logger *log.Logger,writer io.Writer, state internal.State, me
 		logger.Printf("Hover was requested")
 		// Create a response
 		// let's reply here. How?
+		var responseStr string
+		foundNeed, err := state.FindNeedsInRequestedPosition(request.Params.TextDocument.URI, request.Params.Position)
+		if err != nil {
+			responseStr = err.Error()
+		} else {
+			responseStr = foundNeed.GenerateHoverInfo()
+		}
 		response := lsp.HoverResponse{
 			Response: lsp.Response{
 				RPC: "2.0",
-				ID: &request.ID,	
+				ID:  &request.ID,
 			},
-			Result:   lsp.HoverResult{
-				Contents: "",
+			Result: lsp.HoverResult{
+				Contents: responseStr,
 			},
 		}
+		writeResponse(writer, response)
+	case "textDocument/definition":
+		//Def request ('K')
+		var request lsp.DefinitionRequest
+		if err := json.Unmarshal(contents, &request); err != nil {
+			logger.Printf("could not parse stuff: %s", err.Error())
+			return
+		}
+		logger.Printf("Go to definition was requested")
+		// Create a response
+		// let's reply here. How?
+		var responseStr string
+		foundNeed, err := state.FindNeedsInRequestedPosition(request.Params.TextDocument.URI, request.Params.Position)
+		if err != nil {
+			responseStr = err.Error()
+		} else {
+			responseStr = foundNeed.GenerateHoverInfo()
+		}
+		response := lsp.HoverResponse{
+			Response: lsp.Response{
+				RPC: "2.0",
+				ID:  &request.ID,
+			},
+			Result: lsp.HoverResult{
+				Contents: responseStr,
+			},
+		}
+		writeResponse(writer, response)
+	}
 }
 
 func writeResponse(writer io.Writer, msg any) {
-	reply := rpc.EncodeMsg(msg)	
+	reply := rpc.EncodeMsg(msg)
 	writer.Write([]byte(reply))
 }
 

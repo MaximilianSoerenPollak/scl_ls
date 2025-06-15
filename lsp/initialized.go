@@ -31,8 +31,9 @@ type ServerInfo struct {
 }
 
 type ServerCapabilities struct {
-	TextDocumentSync int  `json:"textDocumentSync"`
-	HoverProvider    bool `json:"hoverProvider"`
+	TextDocumentSync   int  `json:"textDocumentSync"`
+	HoverProvider      bool `json:"hoverProvider"`
+	DefinitionProvider bool `json:"definitionProvider"`
 }
 
 func NewInitializeReponse(id int) InitializeResponse {
@@ -43,8 +44,9 @@ func NewInitializeReponse(id int) InitializeResponse {
 		},
 		Result: InitializeResult{
 			Capabilities: ServerCapabilities{
-				TextDocumentSync: 1,
-				HoverProvider:    true,
+				TextDocumentSync:   1,
+				HoverProvider:      true,
+				DefinitionProvider: true,
 			},
 			ServerInfo: ServerInfo{
 				Name:    "scl_lsp",
