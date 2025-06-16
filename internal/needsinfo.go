@@ -19,51 +19,51 @@ type NeedsInfo map[string]Need
 type Need struct {
 	// Idea here is to display the thing nicely maybe in the future.
 	// But for now we just want to go to the definition
-	
+
 	// This should cover most things that we need (I hope)
-	Content          string   `json:"content"`
-	Docname          string   `json:"docname"`
-	ID               string   `json:"id"`
-	Lineno           int      `json:"lineno"`
-	ReqType          string   `json:"req_type"`
-	Safety           string   `json:"safety"`
-	SectionName      string   `json:"section_name"`
-	Security         string   `json:"security"`
-	Status           string   `json:"status"`
-	Title            string   `json:"title"`
-	Type             string   `json:"type"`
-	TypeName         string   `json:"type_name"`
-	DocType          string   `json:"doc_type"`
-	IsExternal       bool     `json:"is_external"`
-	Tags             []string `json:"tags"`
-	Approvers        []string `json:"approvers"`
-	Hash             string   `json:"hash"`
-	Implemented      string   `json:"implemented"` // YES | PARTIAL | NO
-	ParentCovered    string   `json:"parent_covered"`
-	ParentHasProblem string   `json:"parent_has_problem"`
-	Rationale        string   `json:"rationale"`
-	ReqCovered       bool     `json:"req_covered"`
-	Reviewers        []string `json:"reviewers"`
-	SourceCodeLink   []string `json:"source_code_link"`
-	TestLink         []string `json:"testlink"`
-	TestCovered      bool     `json:"test_covered"`
+	Content          string      `json:"content,omitempty"`
+	Docname          string      `json:"docname,omitempty"`
+	ID               string      `json:"id,omitempty"`
+	Lineno           int         `json:"lineno,omitempty"`
+	ReqType          string      `json:"req_type,omitempty"`
+	Safety           string      `json:"safety,omitempty"`
+	SectionName      string      `json:"section_name,omitempty"`
+	Security         string      `json:"security,omitempty"`
+	Status           string      `json:"status,omitempty"`
+	Title            string      `json:"title,omitempty"`
+	Type             string      `json:"type,omitempty"`
+	TypeName         string      `json:"type_name,omitempty"`
+	DocType          string      `json:"doc_type,omitempty"`
+	IsExternal       bool        `json:"is_external,omitempty"`
+	Tags             StringSlice `json:"tags,omitempty"`
+	Approvers        StringSlice `json:"approvers,omitempty"`
+	Hash             string      `json:"hash,omitempty"`
+	Implemented      string      `json:"implemented,omitempty"` // YES | PARTIAL | NO
+	ParentCovered    string      `json:"parent_covered,omitempty"`
+	ParentHasProblem string      `json:"parent_has_problem,omitempty"`
+	Rationale        string      `json:"rationale,omitempty"`
+	ReqCovered       bool        `json:"req_covered,omitempty"`
+	Reviewers        StringSlice `json:"reviewers,omitempty"`
+	SourceCodeLink   StringSlice `json:"source_code_link,omitempty"`
+	TestLink         StringSlice `json:"testlink,omitempty"`
+	TestCovered      bool        `json:"test_covered,omitempty"`
 	// Links
-	Realizes    []string `json:"realizes"`
-	Links       []string `json:"links"`
-	Satisfies   []string `json:"satisfies"`
-	Contains    []string `json:"contains"`
-	Has         []string `json:"has"`
-	Input       []string `json:"input"`
-	Output      []string `json:"output"`
-	Responsible []string `json:"responsible"`
-	ApprovedBy  []string `json:"approved_by"`
-	SupportedBy []string `json:"supported_by"`
-	Complies    []string `json:"complies"`
-	Fulfils     []string `json:"fulfils"`
-	Implements  []string `json:"implements"`
-	Uses        []string `json:"uses"`
-	Includes    []string `json:"includes"`
-	IncludedBy  []string `json:"included_by"`
+	Realizes    StringSlice `json:"realizes,omitempty"`
+	Links       StringSlice `json:"links,omitempty"`
+	Satisfies   StringSlice `json:"satisfies,omitempty"`
+	Contains    StringSlice `json:"contains,omitempty"`
+	Has         StringSlice `json:"has,omitempty"`
+	Input       StringSlice `json:"input,omitempty"`
+	Output      StringSlice `json:"output,omitempty"`
+	Responsible StringSlice `json:"responsible,omitempty"`
+	ApprovedBy  StringSlice `json:"approved_by,omitempty"`
+	SupportedBy StringSlice `json:"supported_by,omitempty"`
+	Complies    StringSlice `json:"complies,omitempty"`
+	Fulfils     StringSlice `json:"fulfils,omitempty"`
+	Implements  StringSlice `json:"implements,omitempty"`
+	Uses        StringSlice `json:"uses,omitempty"`
+	Includes    StringSlice `json:"includes,omitempty"`
+	IncludedBy  StringSlice `json:"included_by,omitempty"`
 }
 
 type NeedsJsonInfo struct {

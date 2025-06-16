@@ -41,11 +41,11 @@ func main() {
 		if err != nil {
 			logger.Printf("got an error: %s", err.Error())
 		}
-		handleMessage(logger, writer, state, method, content, srvConfig)
+		handleMessage(logger, writer, &state, method, content)
 	}
 }
 
-func handleMessage(logger *log.Logger, writer io.Writer, state internal.State, method string, contents []byte, srvConfig internal.ServerConfig) {
+func handleMessage(logger *log.Logger, writer io.Writer, state *internal.State, method string, contents []byte) {
 	logger.Printf("Revieced msg with method: %s", method)
 	//logger.Printf("Revieced msg contents: %s", contents)
 
@@ -116,29 +116,16 @@ func handleMessage(logger *log.Logger, writer io.Writer, state internal.State, m
 		//Def request ('K')
 		var request lsp.DefinitionRequest
 		if err := json.Unmarshal(contents, &request); err != nil {
-			logger.Printf("could not parse stuff: %s", err.Error())
-			return
+			logger.Printf("could not parse stuff in textDocument Definition request: %s", err.Error())
 		}
 		logger.Printf("Go to definition was requested")
+		logger.Printf("ID: %d, URI: %s, Pos: %v", request.ID, request.Params.TextDocument.URI, request.Params.Position)
+
 		// Create a response
 		// let's reply here. How?
-		var responseStr string
-		foundNeed, err := state.FindNeedsInRequestedPosition(request.Params.TextDocument.URI, request.Params.Position)
-		if err != nil {
-			responseStr = err.Error()
-		} else {
-			responseStr = foundNeed.GenerateHoverInfo()
-		}
-		response := lsp.HoverResponse{
-			Response: lsp.Response{
-				RPC: "2.0",
-				ID:  &request.ID,
-			},
-			Result: lsp.HoverResult{
-				Contents: responseStr,
-			},
-		}
-		writeResponse(writer, response)
+		msg := state.GoToDefinition(request.ID, request.Params.TextDocument.URI, request.Params.Position)
+		logger.Printf("Sending this go to defniition response: %s", msg)
+		writeResponse(writer, msg)
 	}
 }
 

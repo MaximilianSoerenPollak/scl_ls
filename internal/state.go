@@ -3,8 +3,6 @@ package internal
 import (
 	"log"
 
-	"errors"
-
 	"sclls/lsp"
 )
 
@@ -20,7 +18,7 @@ func NewState(srvConfig ServerConfig, logger *log.Logger) State {
 	needsJson := ParseNeedsJson(srvConfig.NeedsJsonPath, logger)
 	needsList := GetNeedsList(needsJson)
 	m := make(map[string]DocumentInfo)
-	return State{Documents: m, NeedsList: needsList, ServerConfig: srvConfig}
+	return State{Documents: m, NeedsList: needsList, ServerConfig: srvConfig, Logger: logger}
 }
 
 // Need to have a check here if the document is already in the thing
@@ -57,27 +55,39 @@ func (s *State) UpdateNeedsJson(path string) {
 func (s *State) FindNeedsInRequestedPosition(docURI string, pos lsp.Position) (Need, error) {
 	docInfo := s.Documents[docURI]
 	// Probably can speed this up somehow
-	for _, need := range docInfo.Needs {
-		for _, p := range need.Positions {
-			if pos.Line == p.Line && pos.Character >= p.StartCol && pos.Character <= p.EndCol {
-				return need.Need, nil
-			}
-		}
-	}
-	return Need{}, errors.New("could not find information for requested position")
+	return docInfo.FindNeedsInPosition(pos)
 }
 
-func (s *State) GoToDefinition(id int, docUri string, pos lsp.Position) lsp.DefinitionResponse {		
-	l := lsp.Location{URI: docUri}
+func (s *State) GoToDefinition(id int, docURI string, pos lsp.Position) lsp.DefinitionResponse {
+	docInfo := s.Documents[docURI]
+	foundNeed, err := docInfo.FindNeedsInPosition(pos)
+	s.Logger.Printf("Found need for def: %v", foundNeed)
+	if err != nil {
+		s.Logger.Println("Did not find need definition requested")
+		// Need to send error repsonse instead then in teh future
+		s.Logger.Panic(err)
+	}
+	fnDocURI := GetURIFromDocumentName(foundNeed.Docname)
+	s.Logger.Println("Searched for need in document name")
+	s.Logger.Printf("DocURI: %s  Need: %v", fnDocURI, foundNeed)
 
 	return lsp.DefinitionResponse{
 		Response: lsp.Response{
 			RPC: "2.0",
 			ID:  &id,
 		},
-		Result: lsp.DefinitionResult{
-			Location: l,
-
+		Result: lsp.Location{ // This should be Location directly
+			URI: fnDocURI,
+			Range: lsp.Range{
+				Start: lsp.Position{
+					Line:      foundNeed.Lineno,
+					Character: 0,
+				},
+				End: lsp.Position{
+					Line:      foundNeed.Lineno,
+					Character: len(foundNeed.ID),
+				},
+			},
 		},
 	}
 }

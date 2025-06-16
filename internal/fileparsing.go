@@ -2,9 +2,13 @@ package internal
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"log"
 	"net/url"
 	"path/filepath"
+
+	"sclls/lsp"
 )
 
 type DocumentInfo struct {
@@ -36,6 +40,25 @@ func GetDocumentNameFromURI(uri string) (string, error) {
 	}
 	// Get the path and extract just the filename
 	return filepath.Base(parsed.Path), nil
+}
+
+func GetURIFromDocumentName(filename string) string {
+	// Make sure this isn't double-encoding the path
+	absPath, err := filepath.Abs(filename)
+	if err != nil {
+		absPath = filename
+	}
+
+	// Convert to forward slashes for URI
+	uriPath := filepath.ToSlash(absPath)
+
+	// Don't use url.PathEscape here if you're already creating a proper URL
+	fileURI := &url.URL{
+		Scheme: "file",
+		Path:   uriPath, // This should handle encoding properly
+	}
+
+	return fileURI.String()
 }
 
 // Helper I guess?
@@ -118,4 +141,16 @@ func NewDocumentNeeds(uri string, logger *log.Logger) DocumentNeeds {
 		DocName: docName,
 		URI:     uri,
 	}
+}
+
+func (di DocumentInfo) FindNeedsInPosition(pos lsp.Position) (Need, error) {
+	fmt.Println("INSIDE Find NEEDS POSITION")
+	for _, need := range di.Needs {
+		for _, p := range need.Positions {
+			if pos.Line == p.Line && pos.Character >= p.StartCol && pos.Character <= p.EndCol {
+				return need.Need, nil
+			}
+		}
+	}
+	return Need{}, errors.New("could not find a known need at requested position in document")
 }
