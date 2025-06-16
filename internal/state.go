@@ -2,7 +2,6 @@ package internal
 
 import (
 	"log"
-
 	"sclls/lsp"
 )
 
@@ -61,33 +60,33 @@ func (s *State) FindNeedsInRequestedPosition(docURI string, pos lsp.Position) (N
 func (s *State) GoToDefinition(id int, docURI string, pos lsp.Position) lsp.DefinitionResponse {
 	docInfo := s.Documents[docURI]
 	foundNeed, err := docInfo.FindNeedsInPosition(pos)
-	s.Logger.Printf("Found need for def: %v", foundNeed)
 	if err != nil {
 		s.Logger.Println("Did not find need definition requested")
 		// Need to send error repsonse instead then in teh future
 		s.Logger.Panic(err)
 	}
-	fnDocURI := GetURIFromDocumentName(foundNeed.Docname)
+	docName := foundNeed.Docname + ".rst"
+	fnDocURI := GetURIFromDocumentName(docName, s.DocumentRootPath)
 	s.Logger.Println("Searched for need in document name")
-	s.Logger.Printf("DocURI: %s  Need: %v", fnDocURI, foundNeed)
+	s.Logger.Printf("DocURI: %s  Lineo: %d", fnDocURI, foundNeed.Lineno)
 
 	return lsp.DefinitionResponse{
 		Response: lsp.Response{
 			RPC: "2.0",
 			ID:  &id,
 		},
-		Result: lsp.Location{ // This should be Location directly
+		Result: []lsp.Location{{
 			URI: fnDocURI,
 			Range: lsp.Range{
 				Start: lsp.Position{
-					Line:      foundNeed.Lineno,
+					Line:      foundNeed.Lineno - 1,
 					Character: 0,
 				},
 				End: lsp.Position{
-					Line:      foundNeed.Lineno,
-					Character: len(foundNeed.ID),
+					Line:      foundNeed.Lineno - 1,
+					Character: 0,
 				},
 			},
 		},
-	}
+		}}
 }

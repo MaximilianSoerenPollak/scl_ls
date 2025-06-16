@@ -82,16 +82,12 @@ type DefinitionParams struct {
 
 type DefinitionResponse struct {
 	Response
-	Result DefinitionResult `json:"result"`
-}
-
-type DefinitionResult struct {
-	Location
+	Result []Location `json:"result"`
 }
 
 type Location struct {
-	URI   string
-	Range Range `json:"range"`
+	URI   string `json:"uri"`
+	Range Range  `json:"range"`
 }
 
 type Range struct {

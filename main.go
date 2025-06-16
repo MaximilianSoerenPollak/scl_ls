@@ -124,7 +124,6 @@ func handleMessage(logger *log.Logger, writer io.Writer, state *internal.State, 
 		// Create a response
 		// let's reply here. How?
 		msg := state.GoToDefinition(request.ID, request.Params.TextDocument.URI, request.Params.Position)
-		logger.Printf("Sending this go to defniition response: %s", msg)
 		writeResponse(writer, msg)
 	}
 }

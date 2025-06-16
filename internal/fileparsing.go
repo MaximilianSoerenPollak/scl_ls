@@ -18,7 +18,7 @@ type DocumentInfo struct {
 
 type DocumentNeeds struct {
 	DocName string        `json:"docName"`
-	URI     string        `json:"URI"`
+	URI     string        `json:"uri"`
 	Needs   []NeedDocInfo `json:"needs"`
 }
 
@@ -42,13 +42,12 @@ func GetDocumentNameFromURI(uri string) (string, error) {
 	return filepath.Base(parsed.Path), nil
 }
 
-func GetURIFromDocumentName(filename string) string {
+func GetURIFromDocumentName(filename string, docPath string) string {
 	// Make sure this isn't double-encoding the path
-	absPath, err := filepath.Abs(filename)
+	absPath, err := filepath.Abs(docPath + "/" + filename)
 	if err != nil {
 		absPath = filename
 	}
-
 	// Convert to forward slashes for URI
 	uriPath := filepath.ToSlash(absPath)
 
@@ -58,6 +57,7 @@ func GetURIFromDocumentName(filename string) string {
 		Path:   uriPath, // This should handle encoding properly
 	}
 
+	// Might need to make this better?
 	return fileURI.String()
 }
 
