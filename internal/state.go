@@ -3,6 +3,7 @@ package internal
 import (
 	"log"
 	"sclls/lsp"
+	"strings"
 )
 
 type State struct {
@@ -89,4 +90,45 @@ func (s *State) GoToDefinition(id int, docURI string, pos lsp.Position) lsp.Defi
 			},
 		},
 		}}
+}
+
+func (s *State) TextDocumentCompletion(id int, docURI string, pos lsp.Position) lsp.CompletionResponse {
+	docInfo := s.Documents[docURI]
+	lineNr := 0
+	var completionLine string
+	for line := range strings.Lines(docInfo.Content) {
+		if lineNr == pos.Line {
+			completionLine = line
+		}
+		lineNr++
+	}
+	lineContentSplit := strings.Split(completionLine, " ")
+	toBeCompletedItem := lineContentSplit[len(lineContentSplit)-1]
+
+	// Label = What we want to complete
+	var items []lsp.CompletionItem
+	// NeedToCheck if this is okay.
+	// TODO: Pre-compute this once? Might be nicer to do this.
+	if toBeCompletedItem == "" {
+		for _, need := range s.NeedsList {
+			items = append(items, need.GenerateCompletionInfo())
+		} 
+	}
+		
+	for _, need := range s.NeedsList {
+		if strings.HasPrefix(need.ID, toBeCompletedItem) {
+			items = append(items, need.GenerateCompletionInfo())
+		} 
+	}
+	s.Logger.Println("THese are the completion items")
+	s.Logger.Println(items)
+
+	s.Logger.Println("Searched for need in document name")
+	return lsp.CompletionResponse{
+		Response: lsp.Response{
+			RPC: "2.0",
+			ID:  &id,
+		},
+		Result: items,
+	}
 }

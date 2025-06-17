@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"sclls/lsp"
 )
 
 type Creator struct {
@@ -75,4 +76,12 @@ type NeedsJsonInfo struct {
 func (n Need) GenerateHoverInfo() string {
 	// Type,Status,Implemented
 	return fmt.Sprintf("Type: %s\nStatus: %s\nImplemented: %s\n\n %s", n.Type, n.Status, n.Implemented, n.Content)
+}
+
+func (n Need) GenerateCompletionInfo() lsp.CompletionItem {
+	return lsp.CompletionItem{
+		Label:         n.ID,
+		Detail:        fmt.Sprintf("Type: %s\nStatus: %s\nImplemented: %s\n\n %s", n.Type, n.Status, n.Implemented),
+		Documentation: n.Content,
+	}
 }

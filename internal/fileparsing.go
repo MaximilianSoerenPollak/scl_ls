@@ -132,7 +132,6 @@ func getLineAndColumn(content []byte, position int) (int, int) {
 }
 
 func NewDocumentNeeds(uri string, logger *log.Logger) DocumentNeeds {
-
 	docName, err := GetDocumentNameFromURI(uri)
 	if err != nil {
 		logger.Printf("could not convert URI to document name. URI: %s Error: %s", uri, err.Error())

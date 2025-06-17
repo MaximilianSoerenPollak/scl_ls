@@ -125,6 +125,17 @@ func handleMessage(logger *log.Logger, writer io.Writer, state *internal.State, 
 		// let's reply here. How?
 		msg := state.GoToDefinition(request.ID, request.Params.TextDocument.URI, request.Params.Position)
 		writeResponse(writer, msg)
+	case "textDocument/completion":
+		//Def request ('K')
+		var request lsp.CompletionRequest
+		if err := json.Unmarshal(contents, &request); err != nil {
+			logger.Printf("could not parse stuff in textDocument Completion request: %s", err.Error())
+		}
+
+		// Create a response
+		// let's reply here. How?
+		msg := state.TextDocumentCompletion(request.ID, request.Params.TextDocument.URI, request.Params.Position)
+		writeResponse(writer, msg)
 	}
 }
 
