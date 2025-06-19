@@ -103,27 +103,24 @@ func (s *State) TextDocumentCompletion(id int, docURI string, pos lsp.Position) 
 		lineNr++
 	}
 	lineContentSplit := strings.Split(completionLine, " ")
-	toBeCompletedItem := lineContentSplit[len(lineContentSplit)-1]
+	toBeCompletedItem := strings.TrimSpace(lineContentSplit[len(lineContentSplit)-1])
 
 	// Label = What we want to complete
 	var items []lsp.CompletionItem
 	// NeedToCheck if this is okay.
 	// TODO: Pre-compute this once? Might be nicer to do this.
+	//s.Logger.Printf("This is toBeCompletedItem: %v", toBeCompletedItem)
 	if toBeCompletedItem == "" {
 		for _, need := range s.NeedsList {
 			items = append(items, need.GenerateCompletionInfo())
-		} 
+		}
 	}
-		
+
 	for _, need := range s.NeedsList {
 		if strings.HasPrefix(need.ID, toBeCompletedItem) {
 			items = append(items, need.GenerateCompletionInfo())
-		} 
+		}
 	}
-	s.Logger.Println("THese are the completion items")
-	s.Logger.Println(items)
-
-	s.Logger.Println("Searched for need in document name")
 	return lsp.CompletionResponse{
 		Response: lsp.Response{
 			RPC: "2.0",
