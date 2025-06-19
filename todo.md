@@ -1,6 +1,9 @@
 ## What to do next:
 
 
+- [ ] Find a way to make 'template strings' plausable
+- [ ] Implement diagnostics
+    - [ ] Detect template strings
 - [x] Clone project that has documentation in it
 - [ ] Get server setup with configuration and started
 - [x] Have server accept the 'GoToDefinition' method

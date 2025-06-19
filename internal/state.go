@@ -38,13 +38,22 @@ func (s *State) OpenDocument(uri string, content string) {
 	s.Documents[uri] = di
 }
 
-func (s *State) UpdateDocument(uri string, content string) {
+func (s *State) UpdateDocument(uri string, content string) []lsp.Diagnostic{
 	di := s.Documents[uri]
 	di.Content = content
 	byteContent := []byte(content)
 	ndi := FindAllNeedsPositions(byteContent, s.NeedsList)
 	di.Needs = ndi
 	s.Documents[uri] = di
+	return []lsp.Diagnostic{}
+}
+
+func (s *State) FindDiagnosticsInDocument() []lsp.Diagnostic {
+	var diagnostics []lsp.Diagnostic
+	// Maybe we can make it here so that if you have a template string and we don't find a need corresonding
+	// We throw an error that this need doesn't exists?
+	// 
+	return diagnostics
 }
 
 func (s *State) UpdateNeedsJson(path string) {

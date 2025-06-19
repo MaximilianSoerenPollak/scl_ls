@@ -14,6 +14,7 @@ import (
 type DocumentInfo struct {
 	Content string
 	DocumentNeeds
+	Diagnostics []lsp.Diagnostic
 }
 
 type DocumentNeeds struct {
