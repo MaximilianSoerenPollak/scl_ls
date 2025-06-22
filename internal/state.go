@@ -62,6 +62,7 @@ func (s *State) UpdateDocument(uri string, content string) []lsp.Diagnostic {
 	di.Needs = ndi
 	di.Diagnostics = diagnostics
 	if diagnostics == nil {
+		s.Logger.Printf("I think diagnostics is empty: %v", diagnostics)
 		return []lsp.Diagnostic{}
 	}
 	return diagnostics
@@ -75,44 +76,52 @@ func (s *State) FindDiagnosticsInDocument(content []byte) []lsp.Diagnostic {
 	// 1. Search contents for template string start rows
 	reader := bytes.NewReader(content)
 	scanner := bufio.NewScanner(reader)
-	lineNr := 0
+	lineNr := -1
+
 	for scanner.Scan() {
 		lineNr++
 		lineTxt := scanner.Text()
+
+		var templateFound bool
+		var matchedTemplateStr string
 		var cleanStr string
 		for _, tmplStr := range s.TemplateStrings {
 			if strings.HasPrefix(lineTxt, tmplStr) {
 				// Found a prefix we deem a template string
-				cleanStr = strings.ReplaceAll(lineTxt, tmplStr, "")
+				matchedTemplateStr = tmplStr
+				templateFound = true
 				break
 			}
 		}
-		potentialNeedsFound := strings.SplitSeq(cleanStr, ",")
-		for drtyNeed := range potentialNeedsFound {
-			need := strings.TrimSpace(drtyNeed)
-			s.Logger.Printf("This is the need we found: %s", need)
-			if need == "" {
-				break
-			}
-			_, ok := s.NeedsList[need]
-			if !ok {
-				idxStrt := strings.Index(need, lineTxt)
-				idxEnd := len(need)
-				diagnostics = append(diagnostics, lsp.Diagnostic{
-					Range: lsp.Range{
-						Start: lsp.Position{
-							Line:      lineNr,
-							Character: idxStrt,
+		if templateFound {
+			potentialNeedsFound := strings.Split(cleanStr, ",")
+			for _, drtyNeed := range potentialNeedsFound {
+				need := strings.TrimSpace(drtyNeed)
+				s.Logger.Printf("This is the need we found: %s", need)
+				if need == "" {
+					break
+				}
+				_, ok := s.NeedsList[need]
+				if !ok {
+					//s.Logger.Printf("I found a diagnostic thing. This need isnt́ known: %s", diagnostics)
+					idxStrt := strings.Index(need, lineTxt)
+					idxEnd := len(need)
+					diagnostics = append(diagnostics, lsp.Diagnostic{
+						Range: lsp.Range{
+							Start: lsp.Position{
+								Line:      lineNr,
+								Character: idxStrt,
+							},
+							End: lsp.Position{
+								Line:      lineNr,
+								Character: idxEnd,
+							},
 						},
-						End: lsp.Position{
-							Line:      lineNr,
-							Character: idxEnd,
-						},
-					},
-					Severity: 1,
-					Source:   "scl_lsp",
-					Message:  fmt.Sprintf("Need: %s not found in needs.json. Perhaps you made a typo?", need),
-				})
+						Severity: 1,
+						Source:   "scl_lsp",
+						Message:  fmt.Sprintf("Need: %s not found in needs.json. Perhaps you made a typo?", need),
+					})
+				}
 			}
 		}
 	}
@@ -168,16 +177,20 @@ func (s *State) GoToDefinition(id int, docURI string, pos lsp.Position) lsp.Defi
 // Make this only activate when you write one of the template strings
 func (s *State) TextDocumentCompletion(id int, docURI string, pos lsp.Position) lsp.CompletionResponse {
 	docInfo := s.Documents[docURI]
-	lineNr := 0
-	var completionLine string
-	for line := range strings.Lines(docInfo.Content) {
-		if lineNr == pos.Line {
-			completionLine = line
-		}
-		lineNr++
+	line := strings.Split(docInfo.Content, "\n")
+	completionLine := line[pos.Line]
+	linePrefix := ""
+	if int(pos.Character) <= len(completionLine) {
+		linePrefix = completionLine[:pos.Character]
+	} else {
+		// Cursor is beyond the end of the line, treat as end of line
+		linePrefix = completionLine
 	}
-	lineContentSplit := strings.Split(completionLine, " ")
-	toBeCompletedItem := strings.TrimSpace(lineContentSplit[len(lineContentSplit)-1])
+	lastSpace := strings.LastIndexAny(linePrefix, " \t\n\r") // Find last whitespace
+	toBeCompletedItem := linePrefix
+	if lastSpace != -1 {
+		toBeCompletedItem = linePrefix[lastSpace+1:]
+	}
 
 	// Label = What we want to complete
 	var items []lsp.CompletionItem
