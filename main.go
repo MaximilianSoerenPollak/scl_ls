@@ -20,7 +20,7 @@ func main() {
 	needsPath := flag.String("needsPath", "needs.json", "The path to your needs.json")
 	enabled := flag.Bool("enable", true, "Disable the server.")
 	docsPath := flag.String("docsPath", "docs", "The path to your docs folder")
-	templateStrings := flag.String("templateStrings", "#req-ID,#req-traceability", "Template strings (comma seperated) to link source code linker")
+	templateStrings := flag.String("templateStrings", "# req-Id:,# req-traceability:", "Template strings (comma seperated) to link source code linker")
 	//logger.Printf("Gotten following configs: %s, %s", needsPath, docsPath)
 	tmpltStrings := strings.Split(*templateStrings, ",")
 	logger.Println("Hey, sclls started")
@@ -74,8 +74,17 @@ func handleMessage(logger *log.Logger, writer io.Writer, state *internal.State, 
 		logger.Printf("Opened : %s", request.Params.TextDocument.URI)
 		// let's reply here. How?
 		logger.Printf("Text inside the File: %s", request.Params.TextDocument.Text)
-		state.OpenDocument(request.Params.TextDocument.URI, request.Params.TextDocument.Text)
-
+		diagnostics := state.OpenDocument(request.Params.TextDocument.URI, request.Params.TextDocument.Text)
+		writeResponse(writer, lsp.PublishDiagnosticsNotificiation{
+			Notification: lsp.Notification{
+				RPC:    "2.0",
+				Method: "textDocument/publishDiagnostics",
+			},
+			Params: lsp.PublishDiagnosticsParams{
+				URI:         request.Params.TextDocument.URI,
+				Diagnostics: diagnostics,
+			},
+		})
 	case "textDocument/didChange":
 		var request lsp.TextDocumentDidChangeNotification
 		if err := json.Unmarshal(contents, &request); err != nil {
@@ -88,17 +97,14 @@ func handleMessage(logger *log.Logger, writer io.Writer, state *internal.State, 
 			writeResponse(writer, lsp.PublishDiagnosticsNotificiation{
 				Notification: lsp.Notification{
 					RPC:    "2.0",
-					Method: "textDocument/publishDiagnostics"},
+					Method: "textDocument/publishDiagnostics",
+				},
 				Params: lsp.PublishDiagnosticsParams{
 					URI:         request.Params.TextDocument.URI,
 					Diagnostics: diagnostics,
 				},
-			},
-			)
-			// TODO: Update text Document state
+			})
 		}
-		// let's reply here. How?
-
 	case "textDocument/hover":
 		//Hover msg ('K')
 		var request lsp.HoverRequest

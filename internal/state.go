@@ -25,7 +25,7 @@ func NewState(srvConfig ServerConfig, logger *log.Logger) State {
 }
 
 // Need to have a check here if the document is already in the thing
-func (s *State) OpenDocument(uri string, content string) {
+func (s *State) OpenDocument(uri string, content string) []lsp.Diagnostic {
 	// Document already exists and was opened again
 	di, ok := s.Documents[uri] //
 	if !ok {
@@ -41,8 +41,16 @@ func (s *State) OpenDocument(uri string, content string) {
 	di.Content = content
 	byteContent := []byte(content)
 	ndi := FindAllNeedsPositions(byteContent, s.NeedsList)
+	diagnostics := s.F2indDiagnosticsInDocument(byteContent)
 	documentNeeds.Needs = ndi
 	di.DocumentNeeds = documentNeeds
+	di.Needs = ndi
+	di.Diagnostics = diagnostics
+	if diagnostics == nil {
+		s.Logger.Printf("I think diagnostics is empty: %v", diagnostics)
+		return []lsp.Diagnostic{}
+	}
+	return diagnostics
 }
 
 func (s *State) UpdateDocument(uri string, content string) []lsp.Diagnostic {
@@ -58,14 +66,15 @@ func (s *State) UpdateDocument(uri string, content string) []lsp.Diagnostic {
 	}
 	byteContent := []byte(content)
 	ndi := FindAllNeedsPositions(byteContent, s.NeedsList)
-	diagnostics := s.FindDiagnosticsInDocument(byteContent)
+	//diagnostics := s.F2indDiagnosticsInDocument(byteContent)
 	di.Needs = ndi
-	di.Diagnostics = diagnostics
-	if diagnostics == nil {
-		s.Logger.Printf("I think diagnostics is empty: %v", diagnostics)
-		return []lsp.Diagnostic{}
-	}
-	return diagnostics
+	di.Content = content
+	// di.Diagnostics = diagnostics
+	// if diagnostics == nil {
+	// 	s.Logger.Printf("I think diagnostics is empty: %v", diagnostics)
+	// 	return []lsp.Diagnostic{}
+	// }
+	return []lsp.Diagnostic{}
 }
 
 func (s *State) FindDiagnosticsInDocument(content []byte) []lsp.Diagnostic {
@@ -83,12 +92,12 @@ func (s *State) FindDiagnosticsInDocument(content []byte) []lsp.Diagnostic {
 		lineTxt := scanner.Text()
 
 		var templateFound bool
-		var matchedTemplateStr string
+		//var matchedTemplateStr string
 		var cleanStr string
 		for _, tmplStr := range s.TemplateStrings {
 			if strings.HasPrefix(lineTxt, tmplStr) {
 				// Found a prefix we deem a template string
-				matchedTemplateStr = tmplStr
+				//matchedTemplateStr = tmplStr
 				templateFound = true
 				break
 			}
@@ -125,6 +134,109 @@ func (s *State) FindDiagnosticsInDocument(content []byte) []lsp.Diagnostic {
 			}
 		}
 	}
+	return diagnostics
+}
+
+func (s *State) F2indDiagnosticsInDocument(content []byte) []lsp.Diagnostic {
+	var diagnostics []lsp.Diagnostic = []lsp.Diagnostic{} // Initialize to empty slice
+
+	reader := bytes.NewReader(content)
+	scanner := bufio.NewScanner(reader)
+	lineNr := -1 // Start at -1, so the first line processed becomes 0 for LSP
+
+	for scanner.Scan() {
+		lineNr++ // Increment line number (now 0-indexed for LSP)
+		lineTxt := scanner.Text()
+
+		s.Logger.Printf("LSP_SERVER: Diagnostics: Processing line %d: '%s'", lineNr, lineTxt)
+
+		var templateFound bool
+		var matchedTemplatePrefix string // Store the *exact* matched template string (e.g., "#req-ID:")
+
+		for _, tmplStr := range s.TemplateStrings {
+			// Using HasPrefix, which is correct.
+			// Consider if you need case-insensitivity here (e.g., strings.ToLower(lineTxt))
+			if strings.HasPrefix(lineTxt, tmplStr) {
+				matchedTemplatePrefix = tmplStr
+				templateFound = true
+				break // Found a template, break from inner loop
+			}
+		}
+
+		if templateFound { // Only proceed if a template prefix was found
+			s.Logger.Println("We found a template string, now going further")
+			// Use TrimPrefix to correctly get content *after* the matched template string
+			contentAfterPrefix := strings.TrimPrefix(lineTxt, matchedTemplatePrefix)
+			prefixLength := len(matchedTemplatePrefix) // The starting char offset of contentAfterPrefix
+
+			// Split the remaining content by commas
+			potentialNeedsFound := strings.Split(contentAfterPrefix, ",")
+
+			// This tracks the current character offset within `contentAfterPrefix` as we iterate through parts
+			currentOffsetInSuffix := 0
+
+			for _, drtyNeed := range potentialNeedsFound { // Correctly iterate over string values
+				trimmedNeed := strings.TrimSpace(drtyNeed)
+
+				// Calculate the start and end character positions for the *trimmed* need
+				// within the *original lineTxt*.
+				//
+				// 1. Find the offset of the trimmedNeed within its original drtyNeed part.
+				//    e.g., drtyNeed="  Foo  ", trimmedNeed="Foo", offsetWithinDirtyPart=2
+				offsetWithinDirtyPart := strings.Index(drtyNeed, trimmedNeed)
+				if offsetWithinDirtyPart == -1 { // Should not happen for non-empty trimmedNeed
+					offsetWithinDirtyPart = 0
+				}
+
+				// 2. Calculate the character start from the beginning of lineTxt
+				charStart := prefixLength + currentOffsetInSuffix + offsetWithinDirtyPart
+				charEnd := charStart + len(trimmedNeed)
+
+				s.Logger.Printf("LSP_SERVER: Diagnostics: On line %d, found dirty part: '%s', trimmed: '%s'. Range: [%d,%d]",
+					lineNr, drtyNeed, trimmedNeed, charStart, charEnd)
+
+				if trimmedNeed == "" {
+					// This case handles empty parts from trailing commas or double commas (e.g., "ID1,,ID2")
+					// We need to advance the offset for the next iteration.
+					// currentOffsetInSuffix needs to move past the original drtyNeed (even if empty) and the comma.
+					currentOffsetInSuffix += len(drtyNeed) + len(",") // len(drtyNeed) for empty is 0
+					continue                                          // Skip processing this empty need
+				}
+
+				// Check if the trimmedNeed exists in your NeedsList
+				_, ok := s.NeedsList[trimmedNeed] // Assuming s.NeedsList is map[string]Need
+				if !ok {
+					s.Logger.Printf("LSP_SERVER: Diagnostics: Unknown need '%s' on line %d.", trimmedNeed, lineNr)
+					diagnostics = append(diagnostics, lsp.Diagnostic{
+						Range: lsp.Range{
+							Start: lsp.Position{
+								Line:      lineNr,
+								Character: charStart,
+							},
+							End: lsp.Position{
+								Line:      lineNr,
+								Character: charEnd,
+							},
+						},
+						Severity: 1,
+						Source:   "scl_lsp",
+						Message:  fmt.Sprintf("Need '%s' not found. Typo or missing definition?", trimmedNeed),
+					})
+				}
+
+				// Important: Update the offset for the next part.
+				// This must account for the full length of the *original* dirty part, plus the comma that separated it.
+				// For example, if "A, B", first drtyNeed is "A", next part starts after "A,".
+				currentOffsetInSuffix += len(drtyNeed) + len(",")
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		s.Logger.Printf("LSP_SERVER: Error scanning document content for diagnostics: %v", err)
+	}
+
+	s.Logger.Printf("LSP_SERVER: FindDiagnosticsInDocument returning %d diagnostics.", len(diagnostics))
 	return diagnostics
 }
 
@@ -176,27 +288,71 @@ func (s *State) GoToDefinition(id int, docURI string, pos lsp.Position) lsp.Defi
 // TODO:
 // Make this only activate when you write one of the template strings
 func (s *State) TextDocumentCompletion(id int, docURI string, pos lsp.Position) lsp.CompletionResponse {
+	s.Logger.Printf("=== COMPLETION DEBUG ===")
 	docInfo := s.Documents[docURI]
-	line := strings.Split(docInfo.Content, "\n")
-	completionLine := line[pos.Line]
+	if docInfo == nil {
+		s.Logger.Printf("ERROR: Document not found for URI: %s", docURI)
+		return lsp.CompletionResponse{
+			Response: lsp.Response{
+				RPC: "2.0",
+				ID:  &id,
+			},
+			Result: []lsp.CompletionItem{},
+		}
+	}
+	s.Logger.Printf("Position: Line=%d, Character=%d\n", pos.Line, pos.Character)
+	s.Logger.Printf("Document found, content length: %d\n", len(docInfo.Content))
+	s.Logger.Printf("Raw document content: %q\n", docInfo.Content)
+	lines := strings.Split(docInfo.Content, "\n")
+	completionLine := ""
+	if int(pos.Line) < len(lines) {
+		completionLine = lines[pos.Line]
+	} else if int(pos.Line) == len(lines) {
+		s.Logger.Printf("LSP_SERVER: Cursor is on a logically new line (%d), treating as empty.", pos.Line)
+		completionLine = "" // It's an empty line
+	} else {
+		s.Logger.Printf("LSP_SERVER: Completion ERROR: Line %d is significantly out of bounds (doc has %d lines). Returning empty.", pos.Line, len(lines))
+		s.Logger.Printf("LSP_SERVER: Current document content state:\n---\n%q\n---", docInfo.Content)
+		return lsp.CompletionResponse{
+			Response: lsp.Response{RPC: "2.0", ID: &id},
+			Result:   []lsp.CompletionItem{},
+		}
+	}
 	linePrefix := ""
-	if int(pos.Character) <= len(completionLine) {
+	if int(pos.Character) <= len(completionLine) { // Use <= here, if cursor is *at* the end of line
 		linePrefix = completionLine[:pos.Character]
 	} else {
-		// Cursor is beyond the end of the line, treat as end of line
+		// This case means pos.Character is beyond the actual length of the text on the line.
+		// It implies the user typed past the end or the line is still empty but they moved cursor.
+		// We'll treat linePrefix as the entire content of the line, even if character is invalid.
 		linePrefix = completionLine
+		s.Logger.Printf("LSP_SERVER: Cursor character %d is beyond line content length %d. Using full line as prefix.", pos.Character, len(completionLine))
 	}
-	lastSpace := strings.LastIndexAny(linePrefix, " \t\n\r") // Find last whitespace
+	s.Logger.Printf("LSP_SERVER: linePrefix: '%s'", linePrefix)
+
+	// toBeCompletedItem should be the fragment *after* the last space/word boundary
+	// This is useful for filtering specific keywords (like "req-" or "tool_")
+	lastSpace := strings.LastIndexAny(linePrefix, " \t\n\r")
 	toBeCompletedItem := linePrefix
 	if lastSpace != -1 {
 		toBeCompletedItem = linePrefix[lastSpace+1:]
 	}
+	s.Logger.Printf("LSP_SERVER: toBeCompletedItem: '%s'", toBeCompletedItem)
 
 	// Label = What we want to complete
 	var items []lsp.CompletionItem
+	hasReqPrefix := strings.HasPrefix(toBeCompletedItem, "# req-")
+	hasTraceability := strings.Contains(completionLine, "# req-traceability:")
+	hasReqId := strings.Contains(completionLine, "# req-Id:")
+
+	s.Logger.Printf("Condition 1 - HasPrefix('# req-'): %v", hasReqPrefix)
+	s.Logger.Printf("Condition 2a - Contains('# req-traceability:'): %v", hasTraceability)
+	s.Logger.Printf("Condition 2b - Contains('# req-Id:'): %v", hasReqId)
+	s.Logger.Printf("NeedsList length: %d", len(s.NeedsList))
 	// NeedToCheck if this is okay.
 	// TODO: Pre-compute this once? Might be nicer to do this.
 	//s.Logger.Printf("This is toBeCompletedItem: %v", toBeCompletedItem)
+	s.Logger.Printf("To be completed item: %+v", toBeCompletedItem)
 	if strings.HasPrefix(toBeCompletedItem, "req-") {
 		items = append(items, lsp.CompletionItem{
 			Label:            "req-Id:",
@@ -212,27 +368,38 @@ func (s *State) TextDocumentCompletion(id int, docURI string, pos lsp.Position) 
 			InsertText:       "req-traceability: ${1:NEED_ID}",
 			InsertTextFormat: 2,
 		})
-	} else if strings.Contains(completionLine, "# req-traceability:") || strings.Contains(completionLine, "# req-Id:") {
-		if toBeCompletedItem == "" {
-			// Empty start, just give back all suggestions we have
+	}
+	s.Logger.Printf("NeedsList after case 1. length: %d", len(s.NeedsList))
+	if strings.Contains(linePrefix, "req-Id: ") || strings.Contains(linePrefix, "req-traceability: ") {
+		// Find what comes after the colon and space
+		var afterColon string
+		if idx := strings.Index(linePrefix, "req-Id: "); idx != -1 {
+			afterColon = linePrefix[idx+len("req-Id: "):]
+		} else if idx := strings.Index(linePrefix, "req-traceability: "); idx != -1 {
+			afterColon = linePrefix[idx+len("req-traceability: "):]
+		}
+
+		// Remove any spaces at the beginning
+		afterColon = strings.TrimLeft(afterColon, " \t")
+
+		// If nothing typed yet, show all needs
+		if afterColon == "" {
 			for _, need := range s.NeedsList {
 				items = append(items, need.GenerateCompletionInfo())
 			}
 		} else {
-			// We have a non 'empty' start, therefore can do comparisions
+			// Filter needs based on what's already typed
 			for _, need := range s.NeedsList {
-				if strings.HasPrefix(need.ID, toBeCompletedItem) {
+				if strings.HasPrefix(strings.ToLower(need.ID), strings.ToLower(afterColon)) {
 					items = append(items, need.GenerateCompletionInfo())
 				}
 			}
 		}
 	}
-	//s.Logger.Printf("Sending following completion items: %v", items)
+	s.Logger.Printf("Final items count: %d", len(items))
+	s.Logger.Printf("=== END COMPLETION DEBUG ===")
 	return lsp.CompletionResponse{
-		Response: lsp.Response{
-			RPC: "2.0",
-			ID:  &id,
-		},
-		Result: items,
+		Response: lsp.Response{RPC: "2.0", ID: &id},
+		Result:   items,
 	}
 }
