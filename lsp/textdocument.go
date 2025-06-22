@@ -112,9 +112,11 @@ type CompletionResponse struct {
 }
 
 type CompletionItem struct {
-	Label         string `json:"label"`
-	Detail        string `json:"detail"`
-	Documentation string `json:"documentation"`
+	Label            string `json:"label"`
+	Detail           string `json:"detail"`
+	Documentation    string `json:"documentation"`
+	InsertText       string `json:"insertText"`
+	InsertTextFormat int    `json:"insertTextFormat"`
 }
 
 type PublishDiagnosticsNotificiation struct {

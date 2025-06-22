@@ -80,8 +80,10 @@ func (n Need) GenerateHoverInfo() string {
 
 func (n Need) GenerateCompletionInfo() lsp.CompletionItem {
 	return lsp.CompletionItem{
-		Label:         n.ID,
-		Detail:        fmt.Sprintf("Type: %s\nStatus: %s\nImplemented: %s\n\n %s", n.Type, n.Status, n.Implemented),
-		Documentation: n.Content,
+		Label:            n.ID,
+		Detail:           fmt.Sprintf("Type: %s\nStatus: %s\nImplemented: %s\n\n %s", n.Type, n.Status, n.Implemented, n.Content),
+		Documentation:    n.Content,
+		InsertText:       n.ID,
+		InsertTextFormat: 1,
 	}
 }

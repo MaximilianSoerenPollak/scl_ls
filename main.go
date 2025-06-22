@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 
 	"sclls/internal"
 	"sclls/lsp"
@@ -19,13 +20,16 @@ func main() {
 	needsPath := flag.String("needsPath", "needs.json", "The path to your needs.json")
 	enabled := flag.Bool("enable", true, "Disable the server.")
 	docsPath := flag.String("docsPath", "docs", "The path to your docs folder")
+	templateStrings := flag.String("templateStrings", "#req-ID,#req-traceability", "Template strings (comma seperated) to link source code linker")
 	//logger.Printf("Gotten following configs: %s, %s", needsPath, docsPath)
+	tmpltStrings := strings.Split(*templateStrings, ",")
 	logger.Println("Hey, sclls started")
 
 	srvConfig := internal.ServerConfig{
 		Enabled:          *enabled,
 		NeedsJsonPath:    *needsPath,
 		DocumentRootPath: *docsPath,
+		TemplateStrings:  tmpltStrings,
 	}
 	state := internal.NewState(srvConfig, logger)
 	if !srvConfig.Enabled {
