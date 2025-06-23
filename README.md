@@ -11,8 +11,13 @@ Currently this is the MVP with very simple logic and internals. Missing tests et
 Currently I only tested it crudely on Neovim (0.10+). Though plugins/integration for VSCode and Neovim are planned.
 
 Here is how you can implement it in neovim. 
-1. Download the right binary for you [here](https://github.com/MaximilianSoerenPollak/scl_ls/releases)
-2. Inside your init.lua or whever you load your configuration add the following: 
+1. Download the right tar for you [here](https://github.com/MaximilianSoerenPollak/scl_ls/releases)
+2. Extract the tar at a location convenient for you
+```bash
+tar -xf scl_ls_Linux_x86_64.tar.gz -C /home/dev/LSP/scl_ls
+```
+
+3. Inside your init.lua or whever you load your configuration add the following: 
 ```lua
 local client = vim.lsp.start_client {
   name = "scl_lsp",
