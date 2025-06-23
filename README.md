@@ -11,19 +11,16 @@ Currently this is the MVP with very simple logic and internals. Missing tests et
 Currently I only tested it crudely on Neovim (0.10+). Though plugins/integration for VSCode and Neovim are planned.
 
 Here is how you can implement it in neovim. 
-1. Clone The Repo
-```bash
-git clone git@github.com:MaximilianSoerenPollak/scl_ls.git
-```
+1. Download the right binary for you [here](https://github.com/MaximilianSoerenPollak/scl_ls/releases)
 2. Inside your init.lua or whever you load your configuration add the following: 
 ```lua
 local client = vim.lsp.start_client {
-  name = "sclls",
+  name = "scl_lsp",
   cmd = { "<path to the binary>" },
   priority = 1, -- low priority as to not disturb other 'real' LSP's
 }
 if not client then
-  vim.notify("didn't do client thing good")
+  vim.notify("couldn't start scl_lsp")
   return
 end
 
