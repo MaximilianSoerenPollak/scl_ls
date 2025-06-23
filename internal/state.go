@@ -79,7 +79,7 @@ func (s *State) FindDiagnosticsInDocument(content []byte) []lsp.Diagnostic {
 
 	reader := bytes.NewReader(content)
 	scanner := bufio.NewScanner(reader)
-	lineNr := -1 
+	lineNr := -1
 
 	for scanner.Scan() {
 		lineNr++
@@ -180,9 +180,15 @@ func (s *State) GoToDefinition(id int, docURI string, pos lsp.Position) lsp.Defi
 	docInfo := s.Documents[docURI]
 	foundNeed, err := docInfo.FindNeedsInPosition(pos)
 	if err != nil {
-		s.Logger.Println("Did not find need definition requested")
-		// Need to send error repsonse instead then in teh future
-		s.Logger.Panic(err)
+		s.Logger.Printf("Definition: Did not find need definition requested. Error: %s", err.Error())
+		// Need to send error repsonse instead then in the future
+		return lsp.DefinitionResponse{
+			Response: lsp.Response{
+				RPC: "2.0",
+				ID:  &id,
+			},
+			Result: []lsp.Location{},
+		}
 	}
 	docName := foundNeed.Docname + ".rst"
 	fnDocURI := GetURIFromDocumentName(docName, s.DocumentRootPath)
