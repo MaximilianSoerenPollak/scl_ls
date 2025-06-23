@@ -132,6 +132,7 @@ func getLineAndColumn(content []byte, position int) (int, int) {
 	return line, col
 }
 
+// TODO: Return error?
 func NewDocumentNeeds(uri string, logger *log.Logger) DocumentNeeds {
 	docName, err := GetDocumentNameFromURI(uri)
 	if err != nil {
