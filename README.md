@@ -40,7 +40,7 @@ vim.api.nvim_create_autocmd("FileType", {
 
 ### Diagnostics
 It can publish diagnostics as errors or warnings. It looks like this: 
-![](_assets/diagnostis_prev.png)
+![](./_assets/diagnostics_prev.png)
 
 ### Go To Definition
 If you have a 'need' it knows defined, it can go to the definition of said need inside of your sphinx documentation (rst files)
