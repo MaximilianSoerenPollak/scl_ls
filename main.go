@@ -17,7 +17,7 @@ import (
 
 func main() {
 	logger := getLogger("/home/maxi/dev/scl_ls/log.txt")
-	needsPath := flag.String("needsPath", "needs.json", "The path to your needs.json")
+	needsPath := flag.String("needsPath", "/home/maxi/dev/scl_ls/needs.json", "The path to your needs.json")
 	enabled := flag.Bool("enable", true, "Disable the server.")
 	docsPath := flag.String("docsPath", "docs", "The path to your docs folder")
 	templateStrings := flag.String("templateStrings", "# req-Id:,# req-traceability:", "Template strings (comma seperated) to link source code linker")
@@ -109,12 +109,10 @@ func handleMessage(logger *log.Logger, writer io.Writer, state *internal.State, 
 		//Hover msg ('K')
 		var request lsp.HoverRequest
 		if err := json.Unmarshal(contents, &request); err != nil {
-			logger.Printf("could not parse stuff: %s", err.Error())
+			logger.Printf("Hover: could not parse request: %s", err.Error())
 			return
 		}
 		logger.Printf("Hover was requested")
-		// Create a response
-		// let's reply here. How?
 		var responseStr string
 		foundNeed, err := state.FindNeedsInRequestedPosition(request.Params.TextDocument.URI, request.Params.Position)
 		if err != nil {
@@ -133,16 +131,15 @@ func handleMessage(logger *log.Logger, writer io.Writer, state *internal.State, 
 		}
 		writeResponse(writer, response)
 	case "textDocument/definition":
-		//Def request ('K')
+		//Def request ('gd')
 		var request lsp.DefinitionRequest
 		if err := json.Unmarshal(contents, &request); err != nil {
-			logger.Printf("could not parse stuff in textDocument Definition request: %s", err.Error())
+			logger.Printf("Definition: could not parse stuff in request: %s", err.Error())
 		}
+		// TODO: Delete these logger stmts
 		logger.Printf("Go to definition was requested")
 		logger.Printf("ID: %d, URI: %s, Pos: %v", request.ID, request.Params.TextDocument.URI, request.Params.Position)
 
-		// Create a response
-		// let's reply here. How?
 		msg := state.GoToDefinition(request.ID, request.Params.TextDocument.URI, request.Params.Position)
 		writeResponse(writer, msg)
 	case "textDocument/completion":
@@ -151,8 +148,6 @@ func handleMessage(logger *log.Logger, writer io.Writer, state *internal.State, 
 			logger.Printf("could not parse stuff in textDocument Completion request: %s", err.Error())
 		}
 
-		// Create a response
-		// let's reply here. How?
 		msg := state.TextDocumentCompletion(request.ID, request.Params.TextDocument.URI, request.Params.Position)
 		writeResponse(writer, msg)
 	}
