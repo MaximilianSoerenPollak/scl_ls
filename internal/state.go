@@ -102,8 +102,27 @@ func (s *State) FindDiagnosticsInDocument(content []byte) []lsp.Diagnostic {
 			s.Logger.Println("We found a template string, now going further")
 			contentAfterPrefix := strings.TrimPrefix(lineTxt, matchedTemplatePrefix)
 			prefixLength := len(matchedTemplatePrefix)
+			if strings.TrimSpace(contentAfterPrefix) == "" {
+				diagnostics = append(diagnostics, lsp.Diagnostic{
+					Range: lsp.Range{
+						Start: lsp.Position{
+							Line:      lineNr,
+							Character: len(matchedTemplatePrefix),
+						},
+						End: lsp.Position{
+							Line:      lineNr,
+							Character: len(matchedTemplatePrefix),
+						},
+					},
+					Severity: 2,
+					Source:   "scl_lsp",
+					Message:  fmt.Sprintf("Found template string but no need after."),
+				})
+				continue
+			}
 
 			potentialNeedsFound := strings.Split(contentAfterPrefix, ",")
+			s.Logger.Printf("Potential Needs is: %d for line: %d", len(potentialNeedsFound), lineNr)
 
 			currentOffsetInSuffix := 0
 
